@@ -1,10 +1,13 @@
 package com.optimisation.CallerMicroservice.serviceImpl;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -27,7 +30,7 @@ public class PersonServiceImpl implements PersonService {
 	RestTemplate restTemplate;
 
 	@Override
-	public List<Person> getAllPersons() {       // ToDo : Change List type to PersonDto 
+	public List<Person> getAllPersons() {       // ToDo : Change List type to PersonDto
 
 		return getAllPersonsFromMockRepository();
 	}
@@ -47,13 +50,15 @@ public class PersonServiceImpl implements PersonService {
 
 	public List<EmployeeDetail> getAllEmployeeDetailsRESTTemplate() {
 
-		ResponseEntity<List<EmployeeDetail>> rateResponse = restTemplate.exchange(
-				"http://localhost:8081/employees/all-employees", HttpMethod.GET, null,
-				new ParameterizedTypeReference<List<EmployeeDetail>>() {
-				});
-		List<EmployeeDetail> employeesDetails = rateResponse.getBody();
+		ResponseEntity<String> rateResponse = restTemplate.exchange(
+				"http://localhost:8081/employees/all-employees", HttpMethod.GET, null,String.class);
+		String employeesDetailsJson = rateResponse.getBody();
 
-		return employeesDetails;
+		Gson gson = new Gson();
+		Type userListType = new TypeToken<ArrayList<EmployeeDetail>>(){}.getType();
+		List<EmployeeDetail> employeeDetail = gson.fromJson(employeesDetailsJson, userListType);
+
+		return employeeDetail;
 
 	}
 
