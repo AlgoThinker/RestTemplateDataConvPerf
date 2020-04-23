@@ -5,9 +5,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -26,40 +28,46 @@ import com.optimisation.CallerMicroservice.service.PersonService;
 @Service
 public class PersonServiceImpl implements PersonService {
 
-	@Autowired
-	RestTemplate restTemplate;
+    @Autowired
+    RestTemplate restTemplate;
 
-	@Override
-	public List<Person> getAllPersons() {       // ToDo : Change List type to PersonDto
+    @Override
+    public List<Person> getAllPersons() {       // ToDo : Change List type to PersonDto
 
-		return getAllPersonsFromMockRepository();
-	}
+        return getAllPersonsFromMockRepository();
+    }
 
-	public List<Person> getAllPersonsFromMockRepository() {
+    public List<Person> getAllPersonsFromMockRepository() {
 
-		List<EmployeeDetail> allEmpDetails = getAllEmployeeDetailsRESTTemplate();
-		List<Person> allPersons = new ArrayList<>();
+        List<EmployeeDetail> allEmpDetails = getAllEmployeeDetailsRESTTemplate();
+        List<Person> allPersons = new ArrayList<>();
 
-		for (EmployeeDetail ed : allEmpDetails) {
-			allPersons.add(new Person(ed.getId() , ed.getFirstName() + " " + ed.getLastName(), ed, "30"));
-		}
+        for (EmployeeDetail ed : allEmpDetails) {
+            allPersons.add(new Person(ed.getId(), ed.getFirstName() + " " + ed.getLastName(), ed, "30"));
+        }
 
-		return allPersons;
+        return allPersons;
 
-	}
+    }
 
-	public List<EmployeeDetail> getAllEmployeeDetailsRESTTemplate() {
+    public List<EmployeeDetail> getAllEmployeeDetailsRESTTemplate() {
 
-		ResponseEntity<String> rateResponse = restTemplate.exchange(
-				"http://localhost:8081/employees/all-employees", HttpMethod.GET, null,String.class);
-		String employeesDetailsJson = rateResponse.getBody();
+        ResponseEntity<String> empDetailResponse = restTemplate.exchange(
+                "http://localhost:8081/employees/all-employees", HttpMethod.GET, null, String.class);
+        String employeesDetailsJson = empDetailResponse.getBody();
 
-		Gson gson = new Gson();
-		Type userListType = new TypeToken<ArrayList<EmployeeDetail>>(){}.getType();
-		List<EmployeeDetail> employeeDetail = gson.fromJson(employeesDetailsJson, userListType);
+        JsonParser parser = new JsonParser();
+        JsonElement tradeElement = parser.parse(employeesDetailsJson);
+        JsonArray arr = tradeElement.getAsJsonArray();
 
-		return employeeDetail;
+        ArrayList<JsonObject> list = new ArrayList<>();
+        arr.forEach(jsonElement -> list.add(jsonElement.getAsJsonObject()));
 
-	}
+        List<EmployeeDetail> employeeDetail = list.stream().parallel().map(empJsonObject
+                -> new Gson().fromJson(empJsonObject, EmployeeDetail.class)).collect(Collectors.toList());
+
+        return employeeDetail;
+
+    }
 
 }
